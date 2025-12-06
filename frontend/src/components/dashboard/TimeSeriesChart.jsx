@@ -22,7 +22,7 @@ const lineOptions = {
   },
 }
 
-export default function TimeSeriesChart({ data }) {
+export default function TimeSeriesChart({ data = [] }) {
   const labels = data?.map((point) => point.period) ?? []
   const chartData = {
     labels,
@@ -72,10 +72,6 @@ TimeSeriesChart.propTypes = {
       done: PropTypes.number.isRequired,
     }),
   ),
-}
-
-TimeSeriesChart.defaultProps = {
-  data: [],
 }
 
 

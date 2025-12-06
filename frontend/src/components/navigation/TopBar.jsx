@@ -18,7 +18,7 @@ export default function TopBar({ onMenuClick }) {
           ☰
         </button>
         <div>
-          <p className="text-xs uppercase text-neutral-500">Hostel Repairs</p>
+          <p className="text-xs uppercase text-neutral-500">Hostel Maintenance</p>
           <p className="text-lg font-semibold text-neutral-900">Operations Overview</p>
         </div>
       </div>

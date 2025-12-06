@@ -148,113 +148,106 @@ export default function HallSelectionPage() {
             Choose a hall to view and manage its issues, or view all halls combined
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={loadData}>
-            Refresh
-          </Button>
-          {user?.role === 'admin' && (
-            <Button onClick={handleManualSync} disabled={syncing}>
-              {syncing ? 'Syncing...' : 'Trigger Manual Sync'}
-            </Button>
-          )}
-        </div>
       </div>
 
+      {/* Compact Sync Status Bar - Admin Only */}
       {user?.role === 'admin' && syncStatus && (
-        <Card className="bg-gradient-to-r from-primary-50 to-blue-50 border-primary-200">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-primary-700">Google Sheets Integration</p>
-              <h3 className="text-lg font-bold text-primary-900">Sync Status</h3>
-              <p className="text-sm text-primary-600">
-                The APScheduler job pulls new submissions every 15 minutes.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-6">
-              <div className="text-right">
-                <p className="text-xs font-semibold text-primary-600 uppercase tracking-wide">Last Sync</p>
-                {lastSync ? (
-                  <>
-                    <p className="text-xl font-bold text-primary-900">
-                      {formatSyncTime(lastSync.completed_at || lastSync.started_at)}
-                    </p>
-                    <p
-                      className={`text-xs font-semibold ${
-                        lastSync.status === 'success' ? 'text-status-done' : 'text-status-pending'
-                      }`}
-                    >
-                      {lastSync.status === 'success' ? 'Success' : 'Failed'} •{' '}
-                      {lastSync.rows_processed || 0} rows processed
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xl font-bold text-primary-900">Never</p>
-                    <p className="text-xs text-primary-500">No syncs yet</p>
-                  </>
+        <div className="flex items-center justify-between rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-2.5">
+          <div className="flex items-center gap-3">
+            {/* Status Indicator */}
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${
+                lastSync?.status === 'success'
+                  ? 'bg-green-500'
+                  : lastSync?.status === 'failed'
+                    ? 'bg-red-500'
+                    : 'bg-yellow-500'
+              }`}
+              title={lastSync?.status === 'success' ? 'Healthy' : 'Attention needed'}
+            />
+            <span className="text-sm text-neutral-700">
+              {lastSync ? (
+                <>
+                  Synced {formatRelativeTime(lastSync.completed_at || lastSync.started_at)}
+                  {lastSync.rows_processed > 0 && (
+                    <span className="text-neutral-500"> • {lastSync.rows_processed} new</span>
+                  )}
+                </>
+              ) : (
+                'Never synced'
+              )}
+            </span>
+            {nextScheduled && (
+              <span className="text-sm text-neutral-500">
+                • Next: {format(nextScheduled, 'h:mm a')}
+              </span>
+            )}
+            {/* Show failure warning only if within 24 hours */}
+            {lastFailed && new Date() - new Date(lastFailed.completed_at || lastFailed.started_at) < 24 * 60 * 60 * 1000 && (
+              <span className="text-sm text-amber-600 font-medium">
+                • Failed {formatRelativeTime(lastFailed.completed_at || lastFailed.started_at)}
+              </span>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            className="text-sm px-3 py-1.5"
+            onClick={handleManualSync}
+            disabled={syncing}
+          >
+            {syncing ? 'Syncing...' : 'Sync Now'}
+          </Button>
+        </div>
+      )}
+
+      {/* Hall Cards Grid */}
+      <div>
+        <h3 className="mb-4 text-lg font-semibold text-neutral-700">Select a Hall</h3>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {/* All Halls Card - First in Grid */}
+          <Card
+            className="cursor-pointer border-2 border-primary-300 bg-gradient-to-br from-primary-50 to-blue-50 transition-all hover:shadow-lg hover:border-primary-500"
+            onClick={handleAllHallsClick}
+          >
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <h4 className="text-xl font-bold text-primary-600">All Halls</h4>
+                {systemStats && systemStats.total > 0 && (
+                  <span className="rounded-full bg-primary-100 px-2.5 py-1 text-xs font-semibold text-primary-700">
+                    {systemStats.total} {systemStats.total === 1 ? 'issue' : 'issues'}
+                  </span>
                 )}
               </div>
-              {nextScheduled && (
-                <div className="text-right">
-                  <p className="text-xs font-semibold text-primary-600 uppercase tracking-wide">
-                    Next Scheduled
-                  </p>
-                  <p className="text-xl font-bold text-primary-900">{format(nextScheduled, 'h:mm a')}</p>
-                  <p className="text-xs text-primary-500">Runs every 15 minutes</p>
+
+              {systemStats && systemStats.total > 0 ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-600">Pending:</span>
+                    <span className="font-semibold text-status-pending">{systemStats.pending}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-600">In Progress:</span>
+                    <span className="font-semibold text-status-in-progress">{systemStats.in_progress}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-600">Done:</span>
+                    <span className="font-semibold text-status-done">{systemStats.done}</span>
+                  </div>
+
+                  <div className="border-t border-primary-100 pt-2">
+                    <p className="text-xs text-primary-600">System-wide view</p>
+                  </div>
+                </>
+              ) : (
+                <div className="py-4 text-center">
+                  <p className="text-sm text-primary-600">No issues reported</p>
+                  <p className="text-xs text-primary-400 mt-1">All clear! ✓</p>
                 </div>
               )}
             </div>
-            {lastFailed && (
-              <p className="mt-3 text-xs font-semibold text-status-pending">
-                Last failure {formatRelativeTime(lastFailed.completed_at || lastFailed.started_at)}
-              </p>
-            )}
-          </div>
-        </Card>
-      )}
+          </Card>
 
-      {/* All Halls Card */}
-      <Card
-        className="cursor-pointer border-2 border-primary-200 bg-gradient-to-br from-primary-50 to-blue-50 transition-all hover:shadow-lg hover:border-primary-400"
-        onClick={handleAllHallsClick}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h3 className="text-2xl font-bold text-primary-900">All Halls</h3>
-              <span className="rounded-full bg-primary-600 px-3 py-1 text-sm font-semibold text-white">
-                System-Wide
-              </span>
-            </div>
-            <p className="mt-2 text-sm text-primary-700">View all issues across all halls</p>
-          </div>
-          {systemStats && (
-            <div className="flex gap-8">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-primary-900">{systemStats.total}</p>
-                <p className="text-xs text-primary-600">Total Issues</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-status-pending">{systemStats.pending}</p>
-                <p className="text-xs text-neutral-600">Pending</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-status-in-progress">{systemStats.in_progress}</p>
-                <p className="text-xs text-neutral-600">In Progress</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-status-done">{systemStats.done}</p>
-                <p className="text-xs text-neutral-600">Done</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Individual Hall Cards */}
-      <div>
-        <h3 className="mb-4 text-lg font-semibold text-neutral-700">Individual Halls</h3>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {/* Individual Hall Cards */}
           {halls.map((hall) => {
             const urgencyLevel =
               hall.pending_issues > 10 ? 'high' : hall.pending_issues > 5 ? 'medium' : 'low'

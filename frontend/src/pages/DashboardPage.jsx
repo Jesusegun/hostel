@@ -233,16 +233,21 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          {adminSummary.kpis?.map((kpi) => (
-            <TrendKpiCard
-              key={kpi.label}
-              label={kpi.label}
-              value={kpi.value}
-              change={kpi.change}
-              trend={kpi.trend}
-              description={kpi.description}
-            />
-          ))}
+          {adminSummary.kpis?.map((kpi) => {
+            // Hide trend/percentage for "Total Issues" - it's cumulative and always increases
+            const hideTrend = kpi.label === 'Total Issues'
+            return (
+              <TrendKpiCard
+                key={kpi.label}
+                label={kpi.label}
+                value={kpi.value}
+                change={hideTrend ? null : kpi.change}
+                trend={hideTrend ? null : kpi.trend}
+                description={hideTrend ? 'Total reported (all time)' : kpi.description}
+                lowerIsBetter={kpi.lower_is_better}
+              />
+            )
+          })}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">

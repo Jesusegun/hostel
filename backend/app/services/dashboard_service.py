@@ -185,16 +185,10 @@ def get_admin_dashboard_summary(
     pending_change, pending_trend = _calc_change(pending_current, pending_previous)
     progress_change, progress_trend = _calc_change(progress_current, progress_previous)
     done_change, done_trend = _calc_change(done_current, done_previous)
-    resolution_change_raw, resolution_trend = _calc_change(
+    resolution_change, resolution_trend = _calc_change(
         avg_resolution_hours,
         avg_resolution_hours_prev if avg_resolution_hours_prev else 0,
     )
-    # invert trend for resolution time (lower is better)
-    if resolution_trend == "up":
-        resolution_trend = "down"
-    elif resolution_trend == "down":
-        resolution_trend = "up"
-    resolution_change = abs(resolution_change_raw)
 
     kpis = [
         {
@@ -203,13 +197,15 @@ def get_admin_dashboard_summary(
             "change": total_change,
             "trend": total_trend,
             "description": None,
+            "lower_is_better": False,
         },
         {
             "label": "Pending",
             "value": pending_current,
             "change": pending_change,
             "trend": pending_trend,
-            "description": None,
+            "description": "Lower is better",
+            "lower_is_better": True,
         },
         {
             "label": "In Progress",
@@ -217,6 +213,7 @@ def get_admin_dashboard_summary(
             "change": progress_change,
             "trend": progress_trend,
             "description": None,
+            "lower_is_better": False,
         },
         {
             "label": "Resolved",
@@ -224,6 +221,7 @@ def get_admin_dashboard_summary(
             "change": done_change,
             "trend": done_trend,
             "description": None,
+            "lower_is_better": False,
         },
         {
             "label": "Avg. Resolution (hrs)",
@@ -231,13 +229,15 @@ def get_admin_dashboard_summary(
             "change": resolution_change,
             "trend": resolution_trend,
             "description": "Lower is better",
+            "lower_is_better": True,
         },
         {
             "label": "Issues This Month",
             "value": issues_this_month,
             "change": month_change,
             "trend": month_trend,
-            "description": None,
+            "description": "Lower is better",
+            "lower_is_better": True,
         },
     ]
 

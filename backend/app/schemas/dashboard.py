@@ -18,6 +18,7 @@ class KpiMetric(BaseModel):
     change: float = Field(..., description="Percentage change vs previous period")
     trend: Literal["up", "down", "flat"]
     description: str | None = None
+    lower_is_better: bool = Field(False, description="If True, down trend is good (green), up trend is bad (red)")
 
 
 class CategoryBreakdown(BaseModel):

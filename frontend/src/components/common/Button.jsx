@@ -1,7 +1,7 @@
 import clsx from 'classnames'
 import PropTypes from 'prop-types'
 
-export default function Button({ children, variant = 'primary', className, ...props }) {
+export default function Button({ children, variant = 'primary', className = '', ...props }) {
   const baseClasses =
     'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-95'
   const variants = {
@@ -22,10 +22,5 @@ Button.propTypes = {
   children: PropTypes.node.isRequired,
   variant: PropTypes.oneOf(['primary', 'secondary', 'danger', 'ghost']),
   className: PropTypes.string,
-}
-
-Button.defaultProps = {
-  variant: 'primary',
-  className: '',
 }
 

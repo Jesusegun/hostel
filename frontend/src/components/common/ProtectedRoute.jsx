@@ -2,7 +2,7 @@ import PropTypes from 'prop-types'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import useAuth from '../../hooks/useAuth.js'
 
-export default function ProtectedRoute({ allowedRoles }) {
+export default function ProtectedRoute({ allowedRoles = [] }) {
   const location = useLocation()
   const { isAuthenticated, user } = useAuth()
 
@@ -19,9 +19,5 @@ export default function ProtectedRoute({ allowedRoles }) {
 
 ProtectedRoute.propTypes = {
   allowedRoles: PropTypes.arrayOf(PropTypes.string),
-}
-
-ProtectedRoute.defaultProps = {
-  allowedRoles: undefined,
 }
 

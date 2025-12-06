@@ -7,7 +7,7 @@ const trendColors = {
   flat: 'text-neutral-500',
 }
 
-export default function KpiCard({ label, value, change, trend = 'flat' }) {
+export default function KpiCard({ label, value, change = null, trend = 'flat' }) {
   return (
     <Card className="space-y-2">
       <p className="text-sm text-neutral-500">{label}</p>
@@ -22,10 +22,5 @@ KpiCard.propTypes = {
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   change: PropTypes.string,
   trend: PropTypes.oneOf(['up', 'down', 'flat']),
-}
-
-KpiCard.defaultProps = {
-  change: null,
-  trend: 'flat',
 }
 

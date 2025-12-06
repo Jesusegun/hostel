@@ -7,7 +7,7 @@ const trendStyles = {
   flat: 'text-neutral-500',
 }
 
-export default function HallPerformanceTable({ data }) {
+export default function HallPerformanceTable({ data = [] }) {
   if (!data || data.length === 0) {
     return <p className="mt-6 text-center text-neutral-500">No hall performance data yet.</p>
   }
@@ -63,10 +63,6 @@ HallPerformanceTable.propTypes = {
       trend: PropTypes.oneOf(['up', 'down', 'flat']).isRequired,
     }),
   ),
-}
-
-HallPerformanceTable.defaultProps = {
-  data: [],
 }
 
 
