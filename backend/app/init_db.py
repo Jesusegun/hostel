@@ -19,7 +19,7 @@ Why we need this:
 from sqlalchemy.orm import Session
 import bcrypt
 from app.database import engine, SessionLocal, Base
-from app.models import Hall, Category, User, Issue, AuditLog
+from app.models import Hall, Category, User, Issue, AuditLog, SyncLog, IssueImageRetry
 from app.models.user import UserRole
 import sys
 
@@ -86,13 +86,13 @@ def seed_categories(db: Session):
         "Plumbing",
         "Carpentry",
         "Electrical Issues",
-        "Door Issues",
+        "Door",
         "Bathroom/Toilet",
         "Window",
         "Wardrobe",
         "Bunk",
         "Fan",
-        "Others"
+        "Other"
     ]
     
     created_count = 0

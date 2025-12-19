@@ -14,5 +14,5 @@ from app.models.sync_log import SyncLog
 from app.models.issue_image_retry import IssueImageRetry
 
 # Export all models so they can be imported easily
-__all__ = ["Hall", "Category", "User", "Issue", "AuditLog", "SyncLog"]
+__all__ = ["Hall", "Category", "User", "Issue", "AuditLog", "SyncLog", "IssueImageRetry"]
 
