@@ -6,8 +6,6 @@ Orchestrates Google Sheets synchronization process.
 This service coordinates:
 - Fetching data from Google Sheets
 - Parsing form submissions
-- Downloading images from Google Drive
-- Uploading images to Cloudinary
 - Creating issue records in database
 - Tracking sync history
 
@@ -23,14 +21,15 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import logging
-from app.models import Issue, Hall, Category, AuditLog, SyncLog, IssueImageRetry
+from app.models import Issue, Hall, Category, AuditLog, SyncLog
+# from app.models import IssueImageRetry  # Image upload disabled
 from app.models.issue import IssueStatus
 from app.services.google_sheets_service import (
     fetch_sheet_data,
     parse_form_submission,
-    get_image_drive_url
+    # get_image_drive_url,  # Image upload disabled
 )
-from app.services.cloudinary_service import upload_image_from_url
+# from app.services.cloudinary_service import upload_image_from_url  # Image upload disabled
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -315,13 +314,12 @@ def sync_google_sheets(
     1. Fetch all rows from Google Sheet
     2. Get last synced row index (for incremental sync)
     3. Process only new rows (after last_synced_row_index)
-    4. For each row:
-       - Parse form submission
-       - Check for duplicates
-       - Validate hall and category
-       - Download and upload image to Cloudinary
-       - Create issue record
-       - Create audit log
+     4. For each row:
+         - Parse form submission
+         - Check for duplicates
+         - Validate hall and category
+         - Create issue record
+         - Create audit log
     5. Track progress and create sync log
     
     Args:
@@ -356,19 +354,20 @@ def sync_google_sheets(
     rows_created = 0
     rows_skipped = 0
     errors = []
-    retry_summary = process_image_retry_queue(db)
+    retry_summary = None  # Image retries disabled
 
-    logger.info(
-        "Image retry queue stats: checked=%s, uploaded=%s, remaining=%s",
-        retry_summary.get("entries_checked", 0),
-        retry_summary.get("images_uploaded", 0),
-        retry_summary.get("pending_after"),
-    )
+    # retry_summary = process_image_retry_queue(db)
+    # logger.info(
+    #     "Image retry queue stats: checked=%s, uploaded=%s, remaining=%s",
+    #     retry_summary.get("entries_checked", 0),
+    #     retry_summary.get("images_uploaded", 0),
+    #     retry_summary.get("pending_after"),
+    # )
 
-    def _apply_retry_metrics():
-        sync_log.retry_entries_checked = retry_summary.get("entries_checked", 0)
-        sync_log.retry_images_uploaded = retry_summary.get("images_uploaded", 0)
-        sync_log.retry_errors = retry_summary.get("errors_count", 0)
+    # def _apply_retry_metrics():
+    #     sync_log.retry_entries_checked = retry_summary.get("entries_checked", 0)
+    #     sync_log.retry_images_uploaded = retry_summary.get("images_uploaded", 0)
+    #     sync_log.retry_errors = retry_summary.get("errors_count", 0)
     
     try:
         logger.info(f"Starting Google Sheets sync (manual={manual})")
@@ -385,7 +384,7 @@ def sync_google_sheets(
             sync_log.rows_skipped = 0
             sync_log.errors = None
             sync_log.last_synced_row_index = 0
-            _apply_retry_metrics()
+            # _apply_retry_metrics()
             db.commit()
             return {
                 "status": "success",
@@ -394,7 +393,7 @@ def sync_google_sheets(
                 "rows_skipped": 0,
                 "errors": [],
                 "last_synced_row_index": 0,
-                "retry_summary": retry_summary,
+                # "retry_summary": retry_summary,  # Image upload disabled
             }
         
         # First row is headers
@@ -451,8 +450,7 @@ def sync_google_sheets(
                     logger.info(f"Row {row_index}: Duplicate submission (email={form_data['email']}, hall={form_data['hall']}, room={form_data['room_number']}, category={form_data['category']})")
                     continue
                 
-                # Create issue record first (without image_url)
-                # We need issue.id for Cloudinary folder structure
+                # Create issue record
                 issue = Issue(
                     google_form_timestamp=form_data["timestamp"],
                     student_email=form_data["email"],
@@ -461,33 +459,33 @@ def sync_google_sheets(
                     room_number=form_data["room_number"],
                     category_id=category.id,
                     description=form_data.get("description"),
-                    image_url=None,  # Will be set after upload
+                    # image_url=None,  # Image upload disabled
                     status=IssueStatus.PENDING
                 )
                 db.add(issue)
                 db.flush()  # Get issue.id without committing
                 
-                # Process image (download from Drive, upload to Cloudinary)
-                cloudinary_url = None
-                if form_data.get("image_url"):
-                    try:
-                        # Convert Google Drive URL to direct download URL
-                        download_url = get_image_drive_url(form_data["image_url"])
-                        
-                        # Upload to Cloudinary with actual issue_id
-                        cloudinary_url = upload_image_from_url(download_url, issue_id=issue.id)
-                        
-                        if cloudinary_url:
-                            issue.image_url = cloudinary_url
-                        else:
-                            message = "Cloudinary upload returned no URL, queued for retry"
-                            enqueue_image_retry(db, issue.id, form_data["image_url"], message)
-                            errors.append(f"Row {row_index}: {message}")
-                            logger.warning(f"Row {row_index}: {message}")
-                    except Exception as e:
-                        logger.error(f"Row {row_index}: Error processing image: {e}")
-                        enqueue_image_retry(db, issue.id, form_data["image_url"], str(e))
-                        errors.append(f"Row {row_index}: Image processing error queued for retry")
+                # Image handling disabled (Drive download + Cloudinary upload)
+                # cloudinary_url = None
+                # if form_data.get("image_url"):
+                #     try:
+                #         # Convert Google Drive URL to direct download URL
+                #         download_url = get_image_drive_url(form_data["image_url"])
+                #         
+                #         # Upload to Cloudinary with actual issue_id
+                #         cloudinary_url = upload_image_from_url(download_url, issue_id=issue.id)
+                #         
+                #         if cloudinary_url:
+                #             issue.image_url = cloudinary_url
+                #         else:
+                #             message = "Cloudinary upload returned no URL, queued for retry"
+                #             enqueue_image_retry(db, issue.id, form_data["image_url"], message)
+                #             errors.append(f"Row {row_index}: {message}")
+                #             logger.warning(f"Row {row_index}: {message}")
+                #     except Exception as e:
+                #         logger.error(f"Row {row_index}: Error processing image: {e}")
+                #         enqueue_image_retry(db, issue.id, form_data["image_url"], str(e))
+                #         errors.append(f"Row {row_index}: Image processing error queued for retry")
                 
                 # Create audit log entry
                 audit_log = AuditLog(
@@ -522,7 +520,7 @@ def sync_google_sheets(
         sync_log.rows_skipped = rows_skipped
         sync_log.errors = errors if errors else None
         sync_log.last_synced_row_index = last_synced_row_index
-        _apply_retry_metrics()
+        # _apply_retry_metrics()
         db.commit()
         
         logger.info(f"Sync completed: {rows_created} created, {rows_skipped} skipped, {len(errors)} errors")
@@ -534,7 +532,7 @@ def sync_google_sheets(
             "rows_skipped": rows_skipped,
             "errors": errors,
             "last_synced_row_index": last_synced_row_index,
-            "retry_summary": retry_summary
+            # "retry_summary": retry_summary  # Image upload disabled
         }
         
     except Exception as e:
@@ -551,7 +549,7 @@ def sync_google_sheets(
         sync_log.rows_skipped = rows_skipped
         sync_log.errors = errors
         sync_log.last_synced_row_index = last_synced_row_index
-        _apply_retry_metrics()
+        # _apply_retry_metrics()
         db.commit()
         
         return {
@@ -561,6 +559,6 @@ def sync_google_sheets(
             "rows_skipped": rows_skipped,
             "errors": errors,
             "last_synced_row_index": last_synced_row_index,
-            "retry_summary": retry_summary
+            # "retry_summary": retry_summary  # Image upload disabled
         }
 

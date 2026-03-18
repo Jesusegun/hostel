@@ -77,16 +77,7 @@ export default function SyncStatusPage() {
     
     try {
       const result = await triggerManualSync()
-      if (result?.retry_summary) {
-        const { entries_checked, images_uploaded, errors } = result.retry_summary
-        setSuccessMessage(
-          `Manual sync completed. Retried ${entries_checked} pending images, ${images_uploaded} succeeded${
-            errors && errors.length ? `. ${errors.length} errors logged.` : '.'
-          }`,
-        )
-      } else {
-        setSuccessMessage('Manual sync completed successfully.')
-      }
+      setSuccessMessage('Manual sync completed successfully.')
       // Reload status after sync completes
       await loadSyncStatus(true)
     } catch (err) {

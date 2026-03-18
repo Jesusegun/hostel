@@ -21,14 +21,14 @@ from app.services.issue_service import (
     get_issue_stats,
 )
 from app.services.dashboard_service import get_admin_dashboard_summary
-from app.services.cloudinary_service import (
-    upload_image_from_url,
-    upload_image_from_bytes,
-)
+# from app.services.cloudinary_service import (
+#     upload_image_from_url,
+#     upload_image_from_bytes,
+# )  # Image upload disabled
 from app.services.google_sheets_service import (
     fetch_sheet_data,
     parse_form_submission,
-    get_image_drive_url,
+    # get_image_drive_url,  # Image upload disabled
 )
 from app.services.sync_service import (
     sync_google_sheets,
@@ -45,11 +45,11 @@ __all__ = [
     "update_issue_status",
     "get_issue_stats",
     "get_admin_dashboard_summary",
-    "upload_image_from_url",
-    "upload_image_from_bytes",
+    # "upload_image_from_url",
+    # "upload_image_from_bytes",
     "fetch_sheet_data",
     "parse_form_submission",
-    "get_image_drive_url",
+    # "get_image_drive_url",
     "sync_google_sheets",
     "check_duplicate_issue",
     "find_or_create_hall",

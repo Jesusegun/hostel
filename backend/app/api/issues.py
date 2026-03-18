@@ -108,7 +108,7 @@ async def list_issues(
                     "category_name": "Plumbing",
                     "status": "pending",
                     "created_at": "2025-11-23T10:00:00Z",
-                    "image_url": "https://res.cloudinary.com/..."
+                    
                 }
             ],
             "total": 50,
@@ -159,7 +159,6 @@ async def list_issues(
             category_name=issue.category.name if issue.category else None,
             status=issue.status.value,
             created_at=issue.created_at,
-            image_url=issue.image_url
         )
         for issue in result["issues"]
     ]
@@ -268,7 +267,6 @@ async def get_issue(
             "category_name": "Plumbing",
             "status": "pending",
             "description": "Leaking pipe in bathroom",
-            "image_url": "https://res.cloudinary.com/...",
             "created_at": "2025-11-23T10:00:00Z",
             "audit_logs": [...]
         }
@@ -312,7 +310,6 @@ async def get_issue(
         category_id=issue.category_id,
         category_name=issue.category.name if issue.category else None,
         description=issue.description,
-        image_url=issue.image_url,
         status=issue.status.value,
         resolved_at=issue.resolved_at,
         resolved_by=issue.resolved_by,
@@ -411,7 +408,6 @@ async def update_status(
         category_id=issue.category_id,
         category_name=issue.category.name if issue.category else None,
         description=issue.description,
-        image_url=issue.image_url,
         status=issue.status.value,
         resolved_at=issue.resolved_at,
         resolved_by=issue.resolved_by,

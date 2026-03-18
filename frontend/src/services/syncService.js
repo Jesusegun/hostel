@@ -14,8 +14,8 @@ export async function fetchSyncStatus() {
 /**
  * Manually trigger a Google Sheets sync.
  * 
- * Uses a longer timeout (120 seconds) because sync can take time,
- * especially when processing many rows or uploading images.
+ * Uses a longer timeout (120 seconds) because sync can take time
+ * when processing many rows.
  * 
  * @returns {Promise<Object>} Sync result with status, rows_processed, rows_created, etc.
  */

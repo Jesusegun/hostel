@@ -50,9 +50,9 @@ class Settings(BaseSettings):
     GOOGLE_SHEET_ID: str  # REQUIRED
     
     # ===== Cloudinary (Image Storage) =====
-    CLOUDINARY_CLOUD_NAME: str  # REQUIRED
-    CLOUDINARY_API_KEY: str  # REQUIRED
-    CLOUDINARY_API_SECRET: str  # REQUIRED
+    # CLOUDINARY_CLOUD_NAME: str  # REQUIRED (image upload disabled)
+    # CLOUDINARY_API_KEY: str  # REQUIRED (image upload disabled)
+    # CLOUDINARY_API_SECRET: str  # REQUIRED (image upload disabled)
     
     # ===== Email Service (SMTP) =====
     SMTP_HOST: str  # REQUIRED - e.g., "smtp.gmail.com" or "smtp-mail.outlook.com"

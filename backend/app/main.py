@@ -19,7 +19,8 @@ from app.config import settings, get_cors_origins
 from app.database import SessionLocal, check_db_connection, get_db_url_safe
 from app.logging_config import configure_logging
 from app.middleware import RequestContextMiddleware
-from app.models import IssueImageRetry, SyncLog
+from app.models import SyncLog
+# from app.models import IssueImageRetry  # Image upload disabled
 from app.tasks.sync_scheduler import (
     get_scheduler_status,
     start_scheduler,
@@ -175,16 +176,15 @@ async def health_check():
     scheduler_status = get_scheduler_status()
 
     metrics = {
-        "pending_image_retries": None,
         "last_sync": None,
         "last_sync_status": None,
     }
 
     try:
         with SessionLocal() as session:
-            metrics["pending_image_retries"] = (
-                session.query(IssueImageRetry).count()
-            )
+            # metrics["pending_image_retries"] = (
+            #     session.query(IssueImageRetry).count()
+            # )
             last_sync = (
                 session.query(SyncLog).order_by(SyncLog.started_at.desc()).first()
             )

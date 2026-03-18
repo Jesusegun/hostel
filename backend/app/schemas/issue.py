@@ -34,7 +34,6 @@ class IssueResponse(BaseModel):
         category_id: Category ID
         category_name: Category name
         description: Issue description
-        image_url: Cloudinary URL of the image
         status: Current status (pending, in_progress, done)
         resolved_at: When issue was resolved (None if not resolved)
         resolved_by: User ID who resolved the issue
@@ -54,7 +53,6 @@ class IssueResponse(BaseModel):
             "category_id": 1,
             "category_name": "Plumbing",
             "description": "Leaking pipe",
-            "image_url": "https://res.cloudinary.com/...",
             "status": "pending",
             "resolved_at": null,
             "resolved_by": null,
@@ -74,7 +72,6 @@ class IssueResponse(BaseModel):
     category_id: int
     category_name: Optional[str] = None
     description: Optional[str] = None
-    image_url: Optional[str] = None
     status: str
     resolved_at: Optional[datetime] = None
     resolved_by: Optional[int] = None
@@ -102,7 +99,6 @@ class IssueListItem(BaseModel):
         category_name: Category name
         status: Current status
         created_at: When issue was created
-        image_url: Image URL (for thumbnail)
     
     Example:
         {
@@ -113,7 +109,6 @@ class IssueListItem(BaseModel):
             "category_name": "Plumbing",
             "status": "pending",
             "created_at": "2025-11-23T10:00:00Z",
-            "image_url": "https://res.cloudinary.com/..."
         }
     """
     id: int
@@ -123,7 +118,6 @@ class IssueListItem(BaseModel):
     category_name: Optional[str] = None
     status: str
     created_at: datetime
-    image_url: Optional[str] = None
     
     class Config:
         from_attributes = True

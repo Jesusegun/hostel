@@ -134,7 +134,7 @@ def parse_form_submission(
     5. Room Number (E)
     6. Category (F)
     7. Describe the Issue (G) - Optional
-    8. Image (H) - Google Drive URL
+    8. Image (H) - Google Drive URL (ignored; image upload disabled)
     
     Args:
         row: List of cell values from Google Sheet
@@ -155,7 +155,7 @@ def parse_form_submission(
         #     "room_number": "A205",
         #     "category": "Plumbing",
         #     "description": "Leaking pipe",
-        #     "image_url": "https://drive.google.com/..."
+        #     "image_url": "https://drive.google.com/..."  # Image upload disabled
         # }
     
     Validation:
@@ -224,7 +224,7 @@ def parse_form_submission(
         hall = get_value("hall")
         room_number = get_value("room number") or get_value("room_number")
         category = get_value("category")
-        image_url = get_value("image")
+        # image_url = get_value("image")  # Image upload disabled
         
         # Validate required fields
         if not email or not hall or not room_number or not category:
@@ -243,7 +243,7 @@ def parse_form_submission(
             "room_number": room_number,
             "category": category,
             "description": description if description else None,
-            "image_url": image_url if image_url else None
+            # "image_url": image_url if image_url else None,  # Image upload disabled
         }
         
     except Exception as e:

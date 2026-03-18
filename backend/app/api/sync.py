@@ -15,7 +15,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import logging
 from app.database import get_db
-from app.models import User, SyncLog, IssueImageRetry
+from app.models import User, SyncLog
+# from app.models import IssueImageRetry  # Image upload disabled
 from app.services.sync_service import sync_google_sheets
 from app.dependencies import require_admin
 
@@ -81,7 +82,7 @@ async def trigger_sync(
             "rows_skipped": result["rows_skipped"],
             "errors": result.get("errors", []),
             "last_synced_row_index": result.get("last_synced_row_index", 0),
-            "retry_summary": result.get("retry_summary")
+            # "retry_summary": result.get("retry_summary")  # Image upload disabled
         }
         
     except Exception as e:
@@ -161,13 +162,13 @@ async def get_sync_status(
         .first()
     )
     
-    retry_totals = {
-        "entries_checked": sum(sync.retry_entries_checked for sync in recent_syncs),
-        "images_uploaded": sum(sync.retry_images_uploaded for sync in recent_syncs),
-        "errors": sum(sync.retry_errors for sync in recent_syncs),
-    }
-    
-    pending_image_retries = db.query(IssueImageRetry).count()
+    # retry_totals = {
+    #     "entries_checked": sum(sync.retry_entries_checked for sync in recent_syncs),
+    #     "images_uploaded": sum(sync.retry_images_uploaded for sync in recent_syncs),
+    #     "errors": sum(sync.retry_errors for sync in recent_syncs),
+    # }
+    #
+    # pending_image_retries = db.query(IssueImageRetry).count()
     
     return {
         "last_sync": last_sync.to_dict() if last_sync else None,
@@ -175,7 +176,5 @@ async def get_sync_status(
         "last_failed_sync": last_failed.to_dict() if last_failed else None,
         "recent_syncs": [sync.to_dict() for sync in recent_syncs],
         "total_syncs": total_syncs,
-        "pending_image_retries": pending_image_retries,
-        "recent_retry_totals": retry_totals,
     }
 

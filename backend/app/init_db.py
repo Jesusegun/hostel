@@ -19,7 +19,8 @@ Why we need this:
 from sqlalchemy.orm import Session
 import bcrypt
 from app.database import engine, SessionLocal, Base
-from app.models import Hall, Category, User, Issue, AuditLog, SyncLog, IssueImageRetry
+from app.models import Hall, Category, User, Issue, AuditLog, SyncLog
+# from app.models import IssueImageRetry  # Image upload disabled
 from app.models.user import UserRole
 import sys
 

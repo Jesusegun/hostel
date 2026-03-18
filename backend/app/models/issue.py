@@ -9,7 +9,7 @@ Why this model exists:
 - Store student repair requests
 - Track issue status (pending -> in progress -> done)
 - Associate issues with halls and categories
-- Store image URLs from Cloudinary
+ - Image support disabled (previously stored Cloudinary URLs)
 - Track who resolved the issue and when
 """
 
@@ -58,7 +58,7 @@ class Issue(Base):
             room_number="A205",
             category_id=1,
             description="Leaking pipe in bathroom",
-            image_url="https://res.cloudinary.com/...",
+            # image_url="https://res.cloudinary.com/...",  # Image upload disabled
             status=IssueStatus.PENDING
         )
     """
@@ -121,12 +121,12 @@ class Issue(Base):
         comment="Detailed description of the issue"
     )
     
-    # Image from Cloudinary
-    image_url = Column(
-        String(500),
-        nullable=True,
-        comment="Cloudinary URL of the uploaded image"
-    )
+    # Image from Cloudinary (disabled)
+    # image_url = Column(
+    #     String(500),
+    #     nullable=True,
+    #     comment="Cloudinary URL of the uploaded image"
+    # )
     
     # Status tracking
     status = Column(
@@ -181,12 +181,12 @@ class Issue(Base):
     # issue.audit_logs -> List of all changes made to this issue
     audit_logs = relationship("AuditLog", back_populates="issue")
 
-    # Pending image upload entry (if previous upload failed)
-    image_retry_entry = relationship(
-        "IssueImageRetry",
-        back_populates="issue",
-        uselist=False
-    )
+    # Pending image upload entry (disabled)
+    # image_retry_entry = relationship(
+    #     "IssueImageRetry",
+    #     back_populates="issue",
+    #     uselist=False
+    # )
     
     def __repr__(self):
         """String representation (for debugging)"""
@@ -211,7 +211,7 @@ class Issue(Base):
             "room_number": self.room_number,
             "category_id": self.category_id,
             "description": self.description,
-            "image_url": self.image_url,
+            # "image_url": self.image_url,
             "status": self.status.value,
             "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
             "resolved_by": self.resolved_by,

@@ -48,5 +48,5 @@ class IssueImageRetry(Base):
         nullable=False,
     )
 
-    issue = relationship("Issue", back_populates="image_retry_entry")
+    # issue = relationship("Issue", back_populates="image_retry_entry")  # Image upload disabled
 

@@ -178,15 +178,6 @@ export default function IssueDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          {issue.image_url && (
-            <img
-              src={issue.image_url}
-              alt="Issue"
-              className="w-full rounded-2xl object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          )}
           <div className="mt-6 space-y-4">
             <div>
               <p className="text-xs uppercase text-neutral-500">Description</p>
