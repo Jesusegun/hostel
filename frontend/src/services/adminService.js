@@ -52,6 +52,17 @@ export const unlockUser = async (userId) => {
   return response.data
 }
 
+/**
+ * Update a user's contact email
+ * @param {number} userId - ID of the user
+ * @param {string|null} email - Email address or null to clear
+ * @returns {Promise<Object>} Updated user info
+ */
+export const updateUserEmail = async (userId, email) => {
+  const response = await api.put(`/admin/users/${userId}/email`, { email })
+  return response.data
+}
+
 // ===== Hall Management =====
 
 /**

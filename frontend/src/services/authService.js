@@ -20,3 +20,18 @@ export async function logout() {
   await api.post('/auth/logout')
 }
 
+export async function changePassword(payload) {
+  const { data } = await api.post('/auth/change-password', payload)
+  return data
+}
+
+export async function requestPasswordReset(identifier) {
+  const { data } = await api.post('/auth/forgot-password-email', { identifier })
+  return data
+}
+
+export async function resetPasswordWithToken(payload) {
+  const { data } = await api.post('/auth/reset-password-with-token', payload)
+  return data
+}
+

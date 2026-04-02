@@ -294,6 +294,7 @@ def get_all_users_with_stats(db: Session) -> List[Dict[str, Any]]:
         user_dict = {
             "id": user.id,
             "username": user.username,
+            "email": user.email,
             "role": user.role.value,
             "hall_id": user.hall_id,
             "hall_name": user.hall.name if user.hall else None,

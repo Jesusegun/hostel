@@ -157,3 +157,86 @@ class TokenData(BaseModel):
     role: Optional[str] = None
     hall_id: Optional[int] = None
 
+
+class ChangePasswordRequest(BaseModel):
+    """
+    Authenticated Change Password Request Schema
+
+    Used by logged-in users to change their own password.
+
+    Fields:
+        current_password: User's current password
+        new_password: New password (minimum 8 characters)
+        confirm_password: Confirmation of the new password
+    """
+
+    current_password: str = Field(
+        ...,
+        min_length=1,
+        description="Current password"
+    )
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        description="New password (minimum 8 characters)"
+    )
+    confirm_password: str = Field(
+        ...,
+        min_length=8,
+        description="Must match new_password"
+    )
+
+    @validator("confirm_password")
+    def validate_password_confirmation(cls, value, values):
+        """Ensure confirm_password matches new_password."""
+        new_password = values.get("new_password")
+        if new_password and value != new_password:
+            raise ValueError("New password and confirmation do not match")
+        return value
+
+
+class ForgotPasswordEmailRequest(BaseModel):
+    """
+    Public forgot-password request schema.
+
+    Accepts either username or email as identifier.
+    """
+
+    identifier: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="Username or email"
+    )
+
+
+class ResetPasswordWithTokenRequest(BaseModel):
+    """
+    Public reset-password request schema using a one-time token.
+    """
+
+    token: str = Field(
+        ...,
+        min_length=20,
+        max_length=500,
+        description="One-time reset token"
+    )
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        description="New password (minimum 8 characters)"
+    )
+    confirm_password: str = Field(
+        ...,
+        min_length=8,
+        description="Must match new_password"
+    )
+
+    @validator("confirm_password")
+    def validate_reset_password_confirmation(cls, value, values):
+        """Ensure confirm_password matches new_password."""
+        new_password = values.get("new_password")
+        if new_password and value != new_password:
+            raise ValueError("New password and confirmation do not match")
+        return value
+

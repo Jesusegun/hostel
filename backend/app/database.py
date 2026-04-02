@@ -34,6 +34,7 @@ engine = create_engine(
     pool_pre_ping=True,  # Verify connections before using (handles disconnects)
     pool_size=5,  # Keep 5 connections ready
     max_overflow=10,  # Allow up to 10 extra connections if needed
+    pool_recycle=1800,  # Recycle connections every 30 min (before server-side timeout)
     
     # Echo SQL queries in development (helpful for debugging)
     echo=settings.DEBUG,

@@ -7,6 +7,10 @@ Two types of users:
 1. Hall Admins: Manage issues for their specific hall (11 users)
 2. Admin Users: Manage all halls and system settings (2 users)
 
+Privilege levels:
+- is_superadmin=True: Full system access including user management (DSA only)
+- is_superadmin=False (default): Standard role-based access only
+
 Why this model exists:
 - Authentication (login)
 - Authorization (who can do what)
@@ -88,6 +92,14 @@ class User(Base):
         comment="Bcrypt hashed password"
     )
     
+    # Contact email (optional — used for notifications)
+    email = Column(
+        String(255),
+        nullable=True,
+        unique=True,
+        comment="Contact email for notifications (set by DSA)"
+    )
+    
     # Security question (optional - only for DSA password recovery)
     security_question = Column(
         String(500),
@@ -100,6 +112,31 @@ class User(Base):
         String(255),
         nullable=True,
         comment="Hashed security answer (bcrypt, like password_hash)"
+    )
+
+    # Email password reset token fields (single-use token flow)
+    password_reset_token_hash = Column(
+        String(255),
+        nullable=True,
+        comment="SHA-256 hash of one-time password reset token"
+    )
+
+    password_reset_token_expires_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="UTC time when the password reset token expires"
+    )
+
+    password_reset_requested_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="UTC time when a password reset was requested"
+    )
+
+    password_reset_used_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="UTC time when the password reset token was used"
     )
     
     # Role (hall_admin or admin)
@@ -125,6 +162,17 @@ class User(Base):
         default=True,
         nullable=False,
         comment="Whether this user account is active"
+    )
+    
+    # Superadmin flag — grants full system access including user management.
+    # Only the DSA account should have this set to True.
+    # Using a DB flag instead of checking username so the account can be
+    # renamed or reassigned without touching application code.
+    is_superadmin = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="Full superadmin access (user management). Only DSA should have this."
     )
     
     # Account Lockout Fields (security feature)
@@ -186,10 +234,12 @@ class User(Base):
         data = {
             "id": self.id,
             "username": self.username,
+            "email": self.email,
             "role": self.role.value,
             "hall_id": self.hall_id,
             "hall_name": self.hall.name if self.hall else None,
             "is_active": self.is_active,
+            "is_superadmin": self.is_superadmin,
             "has_security_question": bool(self.security_question),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

@@ -280,8 +280,8 @@ async def get_issue(
             detail="Issue not found or access denied"
         )
     
-    # Get audit logs for this issue
-    audit_logs = db.query(AuditLog).filter(AuditLog.issue_id == issue_id).order_by(AuditLog.timestamp.desc()).all()
+    # Get audit logs for this issue (limit to 50 most recent)
+    audit_logs = db.query(AuditLog).filter(AuditLog.issue_id == issue_id).order_by(AuditLog.timestamp.desc()).limit(50).all()
     
     # Convert audit logs to dicts
     audit_logs_data = [
@@ -368,19 +368,20 @@ async def update_status(
         }
     """
     previous_issue = get_issue_by_id(db, issue_id, current_user)
-    previous_status = previous_issue.status if previous_issue else None
     
-    # Update status via service (includes access control and audit logging)
-    issue = update_issue_status(db, issue_id, status_update.status, current_user)
-    
-    if not issue:
+    if not previous_issue:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Issue not found or access denied"
         )
+        
+    previous_status = previous_issue.status
     
-    # Get audit logs
-    audit_logs = db.query(AuditLog).filter(AuditLog.issue_id == issue_id).order_by(AuditLog.timestamp.desc()).all()
+    # Update status via service (includes audit logging)
+    issue = update_issue_status(db, previous_issue, status_update.status, current_user)
+    
+    # Get audit logs (limit to 50 most recent)
+    audit_logs = db.query(AuditLog).filter(AuditLog.issue_id == issue_id).order_by(AuditLog.timestamp.desc()).limit(50).all()
     
     audit_logs_data = [
         {

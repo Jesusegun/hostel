@@ -12,12 +12,19 @@ Why these endpoints exist:
 - Logout: Client-side token removal (JWT is stateless)
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
-from app.schemas.auth import LoginRequest, LoginResponse, UserResponse
+from app.schemas.auth import (
+    ChangePasswordRequest,
+    ForgotPasswordEmailRequest,
+    LoginRequest,
+    LoginResponse,
+    ResetPasswordWithTokenRequest,
+    UserResponse,
+)
 from app.schemas.admin import (
     SetSecurityQuestionRequest,
     ForgotPasswordRequest,
@@ -26,6 +33,9 @@ from app.schemas.admin import (
 )
 from app.services.auth_service import authenticate_user
 from app.services.password_service import (
+    change_password_authenticated,
+    request_password_reset_email,
+    reset_password_with_token,
     set_security_question,
     get_security_question,
     reset_password_with_security_question,
@@ -217,6 +227,67 @@ async def logout(
     # Client should remove token from storage
     # Future: Could implement token blacklist here if needed
     return {"message": "Successfully logged out"}
+
+
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+async def change_password(
+    request: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Change password for the currently authenticated user.
+
+    Requires the current password, then updates the user password hash.
+    """
+    change_password_authenticated(
+        db=db,
+        user=current_user,
+        current_password=request.current_password,
+        new_password=request.new_password,
+        confirm_password=request.confirm_password,
+    )
+
+    return {"message": "Password changed successfully"}
+
+
+@router.post("/forgot-password-email", status_code=status.HTTP_200_OK)
+async def forgot_password_email(
+    request: ForgotPasswordEmailRequest,
+    request_obj: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Request password reset link via email (public endpoint).
+
+    Always returns a generic success response to avoid account enumeration.
+    """
+    request_password_reset_email(
+        db=db,
+        identifier=request.identifier,
+        request_ip=request_obj.client.host if request_obj.client else None,
+        user_agent=request_obj.headers.get("user-agent"),
+    )
+    return {
+        "message": "If an account exists for that username/email, a reset link has been sent."
+    }
+
+
+@router.post("/reset-password-with-token", status_code=status.HTTP_200_OK)
+async def reset_password_token(
+    request: ResetPasswordWithTokenRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Reset password using a one-time token from email (public endpoint).
+    """
+    reset_password_with_token(
+        db=db,
+        token=request.token,
+        new_password=request.new_password,
+        confirm_password=request.confirm_password,
+    )
+    return {"message": "Password reset successfully. Please login with your new password."}
 
 
 # ===== Password Recovery Endpoints =====

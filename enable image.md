@@ -85,3 +85,22 @@ Recommended order when re-enabling
 3. API schemas and routes.
 4. Frontend rendering and sync UI.
 5. End-to-end tests.
+
+Undo local PostgreSQL switch (back to Render)
+Purpose
+Use this when you have paid for Render again and want to move from local PostgreSQL back to Render PostgreSQL.
+
+Steps
+1. Open [backend/.env](backend/.env).
+2. Find DATABASE_URL and replace the local URL with your Render External Database URL.
+  - Local example currently used:
+    - postgresql://postgres:password@localhost:5432/hostel_repairs
+  - Render URL should typically end with ?sslmode=require
+3. Save the file and restart the backend server.
+4. Verify connectivity via [backend/app/main.py](backend/app/main.py) health endpoint:
+  - GET /api/health should report database: connected
+
+Safety checks before switching
+- Confirm you are editing [backend/.env](backend/.env), not frontend env files.
+- Keep Render credentials out of Git commits.
+- If schema differs between local and Render DB, run migrations before production use.

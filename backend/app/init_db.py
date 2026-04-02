@@ -159,9 +159,16 @@ def seed_users(db: Session):
             print(f"    - Hall admin already exists: {username}")
     
     # Create admin users
+    # dsa gets is_superadmin=True (full user-management access)
+    # maintenance_officer gets is_superadmin=False (standard admin access)
     print("\n  Creating admin users...")
-    admin_usernames = ["maintenance_officer", "dsa"]
-    for username in admin_usernames:
+    admin_users = [
+        {"username": "maintenance_officer", "is_superadmin": False},
+        {"username": "dsa", "is_superadmin": True},
+    ]
+    for admin in admin_users:
+        username = admin["username"]
+        is_superadmin = admin["is_superadmin"]
         # Check if user already exists
         existing_user = db.query(User).filter(User.username == username).first()
         if not existing_user:
@@ -170,13 +177,19 @@ def seed_users(db: Session):
                 password_hash=password_hash,
                 role=UserRole.ADMIN,
                 hall_id=None,  # Admin users don't belong to a specific hall
-                is_active=True
+                is_active=True,
+                is_superadmin=is_superadmin,
             )
             db.add(user)
             created_count += 1
-            print(f"    - Created admin user: {username}")
+            print(f"    - Created admin user: {username} (superadmin={is_superadmin})")
         else:
-            print(f"    - Admin user already exists: {username}")
+            # Ensure the is_superadmin flag is correct even if user already exists
+            if existing_user.is_superadmin != is_superadmin:
+                existing_user.is_superadmin = is_superadmin
+                print(f"    - Updated is_superadmin={is_superadmin} for existing user: {username}")
+            else:
+                print(f"    - Admin user already exists: {username}")
     
     db.commit()
     print(f"\nSUCCESS: {created_count} new users created")

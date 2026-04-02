@@ -116,6 +116,60 @@ def send_issue_resolved_email(issue: Dict[str, Any], reopen_link: str) -> None:
         )
 
 
+def send_password_reset_email(recipient_email: str, reset_token: str, username: str) -> None:
+    """
+    Send password reset link email.
+
+    Uses a one-time token and a short expiry window.
+    """
+    if not recipient_email:
+        return
+
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        logger.warning(
+            "SMTP not configured; skipping password reset email to %s",
+            recipient_email[:3] + "***",
+        )
+        return
+
+    reset_link = f"{settings.FRONTEND_BASE_URL}/reset-password?token={reset_token}"
+    subject = "Reset your Hostel Repairs password"
+    expiry_minutes = settings.PASSWORD_RESET_TOKEN_EXPIRY_MINUTES
+
+    html_body = f"""
+    <p>Hello {username},</p>
+    <p>We received a request to reset your password.</p>
+    <p style=\"margin:16px 0;\">
+      <a href=\"{reset_link}\" style=\"background:#2563EB;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block;\">
+        Reset Password
+      </a>
+    </p>
+    <p>This link expires in {expiry_minutes} minutes and can be used only once.</p>
+    <p>If you did not request this, you can ignore this email.</p>
+    """
+
+    text_body = (
+        f"Hello {username},\n\n"
+        f"We received a request to reset your password.\n"
+        f"Reset link: {reset_link}\n\n"
+        f"This link expires in {expiry_minutes} minutes and can be used only once.\n"
+        "If you did not request this, you can ignore this email."
+    )
+
+    try:
+        _send_with_smtp(
+            recipient_email,
+            {"subject": subject, "html": html_body, "text": text_body},
+        )
+        logger.info("Password reset email sent to %s", recipient_email[:3] + "***")
+    except Exception as exc:
+        logger.error(
+            "Failed to send password reset email to %s: %s",
+            recipient_email[:3] + "***",
+            exc,
+        )
+
+
 def _send_with_smtp(recipient: str, template: Dict[str, str]) -> None:
     """
     Send email using SMTP.
@@ -186,3 +240,178 @@ def _send_with_smtp(recipient: str, template: Dict[str, str]) -> None:
         logger.error("SMTP error occurred: %s", str(e))
         raise
 
+
+# ===== Sync Failure Alert =====
+
+
+def _format_sync_failure_alert(
+    consecutive_failures: int, latest_errors: list
+) -> Dict[str, str]:
+    """Format sync failure alert email template."""
+    error_list = ""
+    for err in latest_errors[:5]:  # Show at most 5 recent errors
+        error_list += f"<li>{err}</li>\n"
+
+    subject = f"⚠️ Sync failure alert — {consecutive_failures} consecutive failures"
+
+    html_body = f"""
+    <p>The Google Sheets sync has failed <strong>{consecutive_failures} times in a row</strong>.</p>
+    <p>This means new student complaints are <strong>not being imported</strong> into the system.</p>
+    <h3>Recent Errors</h3>
+    <ul>{error_list if error_list else "<li>No error details available</li>"}</ul>
+    <p>Please check the server logs and Google Sheets API credentials.</p>
+    <p style="color:#666;font-size:12px;">This is an automated alert from the Hostel Repair Management System.</p>
+    """
+
+    text_body = (
+        f"The Google Sheets sync has failed {consecutive_failures} times in a row.\n"
+        f"New student complaints are NOT being imported into the system.\n\n"
+        f"Recent errors:\n"
+        + "\n".join(f"- {e}" for e in latest_errors[:5])
+        + "\n\nPlease check the server logs and Google Sheets API credentials."
+    )
+
+    return {"subject": subject, "html": html_body, "text": text_body}
+
+
+def send_sync_failure_alert(
+    recipient_email: str, consecutive_failures: int, latest_errors: list
+) -> None:
+    """
+    Send sync failure alert email to an admin user.
+
+    Called by the scheduler when N consecutive syncs have failed.
+
+    Args:
+        recipient_email: Admin email to send alert to
+        consecutive_failures: Number of consecutive failures
+        latest_errors: Recent error messages from sync logs
+
+    Returns:
+        None (logs errors instead of raising)
+    """
+    if not recipient_email:
+        return
+
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        logger.warning(
+            "SMTP not configured; skipping sync failure alert to %s",
+            recipient_email[:3] + "***",
+        )
+        return
+
+    logger.info(
+        "Sending sync failure alert (%d failures) to %s",
+        consecutive_failures,
+        recipient_email[:3] + "***",
+    )
+
+    template = _format_sync_failure_alert(consecutive_failures, latest_errors)
+
+    try:
+        _send_with_smtp(recipient_email, template)
+        logger.info("Sync failure alert sent to %s", recipient_email[:3] + "***")
+    except Exception as exc:
+        logger.error(
+            "Failed to send sync failure alert to %s: %s",
+            recipient_email[:3] + "***",
+            exc,
+        )
+
+
+# ===== New Issue Digest =====
+
+
+def _format_new_issues_digest(
+    hall_name: str, new_count: int, issue_summaries: list
+) -> Dict[str, str]:
+    """Format new issues digest email template."""
+    rows = ""
+    for iss in issue_summaries[:20]:  # Cap at 20 items in email
+        desc = (iss.get("description") or "No description")[:80]
+        rows += (
+            f"<tr>"
+            f"<td style='padding:4px 8px;border-bottom:1px solid #eee;'>{iss.get('room', 'N/A')}</td>"
+            f"<td style='padding:4px 8px;border-bottom:1px solid #eee;'>{iss.get('category', 'N/A')}</td>"
+            f"<td style='padding:4px 8px;border-bottom:1px solid #eee;'>{desc}</td>"
+            f"</tr>\n"
+        )
+
+    subject = f"🔔 {new_count} new issue(s) reported in {hall_name}"
+
+    html_body = f"""
+    <p>Hello,</p>
+    <p><strong>{new_count} new repair request(s)</strong> have been reported in <strong>{hall_name}</strong>.</p>
+    <table style="border-collapse:collapse;width:100%;font-size:14px;">
+      <thead>
+        <tr style="background:#f5f5f5;">
+          <th style="padding:6px 8px;text-align:left;">Room</th>
+          <th style="padding:6px 8px;text-align:left;">Category</th>
+          <th style="padding:6px 8px;text-align:left;">Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows}
+      </tbody>
+    </table>
+    <p>Please log in to the dashboard to review and assign these issues.</p>
+    <p style="color:#666;font-size:12px;">This is an automated notification from the Hostel Repair Management System.</p>
+    """
+
+    text_lines = [f"{new_count} new issue(s) reported in {hall_name}:\n"]
+    for iss in issue_summaries[:20]:
+        desc = (iss.get("description") or "No description")[:80]
+        text_lines.append(
+            f"  Room {iss.get('room', 'N/A')} | {iss.get('category', 'N/A')} | {desc}"
+        )
+    text_lines.append("\nPlease log in to the dashboard to review these issues.")
+
+    return {"subject": subject, "html": html_body, "text": "\n".join(text_lines)}
+
+
+def send_new_issues_digest(
+    recipient_email: str, hall_name: str, new_count: int, issue_summaries: list
+) -> None:
+    """
+    Send new issues digest email to a hall admin.
+
+    Called at the end of a sync run when new issues were created for a hall.
+
+    Args:
+        recipient_email: Hall admin email
+        hall_name: Name of the hall
+        new_count: Number of new issues
+        issue_summaries: List of dicts with room, category, description
+
+    Returns:
+        None (logs errors instead of raising)
+    """
+    if not recipient_email:
+        return
+
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        logger.warning(
+            "SMTP not configured; skipping digest for %s to %s",
+            hall_name,
+            recipient_email[:3] + "***",
+        )
+        return
+
+    logger.info(
+        "Sending new issues digest (%d issues in %s) to %s",
+        new_count,
+        hall_name,
+        recipient_email[:3] + "***",
+    )
+
+    template = _format_new_issues_digest(hall_name, new_count, issue_summaries)
+
+    try:
+        _send_with_smtp(recipient_email, template)
+        logger.info("Issues digest sent to %s", recipient_email[:3] + "***")
+    except Exception as exc:
+        logger.error(
+            "Failed to send issues digest to %s: %s",
+            recipient_email[:3] + "***",
+            exc,
+        )

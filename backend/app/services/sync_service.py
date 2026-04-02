@@ -21,15 +21,17 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import logging
-from app.models import Issue, Hall, Category, AuditLog, SyncLog
+from app.models import Issue, Hall, Category, AuditLog, SyncLog, User
 # from app.models import IssueImageRetry  # Image upload disabled
 from app.models.issue import IssueStatus
+from app.models.user import UserRole
 from app.services.google_sheets_service import (
     fetch_sheet_data,
     parse_form_submission,
     # get_image_drive_url,  # Image upload disabled
 )
 # from app.services.cloudinary_service import upload_image_from_url  # Image upload disabled
+from app.services.email_service import send_new_issues_digest
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -355,6 +357,7 @@ def sync_google_sheets(
     rows_skipped = 0
     errors = []
     retry_summary = None  # Image retries disabled
+    new_issues_by_hall = {}  # hall_id -> list of issue summaries (for digest emails)
 
     # retry_summary = process_image_retry_queue(db)
     # logger.info(
@@ -504,6 +507,18 @@ def sync_google_sheets(
                 
                 logger.info(f"Row {row_index}: Created issue {issue.id} for {form_data['email']}")
                 
+                # Track for digest email
+                if hall.id not in new_issues_by_hall:
+                    new_issues_by_hall[hall.id] = {
+                        "hall_name": hall.name,
+                        "issues": [],
+                    }
+                new_issues_by_hall[hall.id]["issues"].append({
+                    "room": form_data["room_number"],
+                    "category": form_data["category"],
+                    "description": form_data.get("description"),
+                })
+                
             except Exception as e:
                 db.rollback()
                 rows_skipped += 1
@@ -524,6 +539,27 @@ def sync_google_sheets(
         db.commit()
         
         logger.info(f"Sync completed: {rows_created} created, {rows_skipped} skipped, {len(errors)} errors")
+        
+        # ── Send digest emails to hall admins ────────────────────
+        # One email per hall, sent only if new issues were created.
+        # Wrapped in try/except so email failures never corrupt the sync result.
+        for hall_id, hall_data in new_issues_by_hall.items():
+            try:
+                hall_admin = db.query(User).filter(
+                    User.role == UserRole.HALL_ADMIN,
+                    User.hall_id == hall_id,
+                    User.email.isnot(None),
+                    User.is_active == True,
+                ).first()
+                if hall_admin and hall_admin.email:
+                    send_new_issues_digest(
+                        recipient_email=hall_admin.email,
+                        hall_name=hall_data["hall_name"],
+                        new_count=len(hall_data["issues"]),
+                        issue_summaries=hall_data["issues"],
+                    )
+            except Exception as e:
+                logger.error(f"Failed to send digest for hall {hall_data['hall_name']}: {e}")
         
         return {
             "status": "success",

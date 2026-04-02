@@ -11,6 +11,7 @@ import AdminUsersPage from './pages/AdminUsersPage.jsx'
 import AdminHallsPage from './pages/AdminHallsPage.jsx'
 import AdminCategoriesPage from './pages/AdminCategoriesPage.jsx'
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx'
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx'
 import SetSecurityQuestionPage from './pages/SetSecurityQuestionPage.jsx'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />

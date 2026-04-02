@@ -192,23 +192,25 @@ def require_hall_admin_or_admin(current_user: User = Depends(get_current_user)) 
 def require_dsa(current_user: User = Depends(get_current_user)) -> User:
     """
     Dependency for DSA-only routes (admin management features).
-    
-    Only the 'dsa' username can access these endpoints.
-    maintenance_officer cannot access admin management.
-    
+
+    Only users with is_superadmin=True can access these endpoints.
+    maintenance_officer and hall admins cannot access admin management.
+
+    Using a DB flag rather than a username comparison so the DSA account
+    can be renamed or reassigned without touching application code.
+
     Usage:
         @router.post("/api/admin/users")
         def create_user(current_user: User = Depends(require_dsa)):
-            # Only DSA can access this
+            # Only superadmin can access this
             return {"message": "User created"}
-    
+
     Raises:
-        HTTPException 403: If user is not DSA
+        HTTPException 403: If user does not have is_superadmin=True
     """
-    if current_user.username != "dsa":
+    if not current_user.is_superadmin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied. DSA role required for admin management."
+            detail="Access denied. Superadmin privileges required for admin management.",
         )
     return current_user
-

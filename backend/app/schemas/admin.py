@@ -11,7 +11,8 @@ These schemas:
 """
 
 from typing import Optional, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
+import re
 
 
 # ===== User Management Schemas =====
@@ -67,6 +68,7 @@ class UserResponse(BaseModel):
     """
     id: int
     username: str
+    email: Optional[str] = None
     role: str
     hall_id: Optional[int] = None
     hall_name: Optional[str] = None
@@ -78,6 +80,37 @@ class UserResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class UpdateUserEmailRequest(BaseModel):
+    """
+    Request schema for updating a user's email address.
+    
+    Fields:
+        email: Valid email address or None to clear
+    """
+    email: Optional[str] = Field(None, max_length=255, description="Email address or null to clear")
+    
+    @field_validator("email")
+    @classmethod
+    def validate_email_format(cls, v):
+        """Validate email format when provided."""
+        if v is None:
+            return v
+        v = v.strip().lower()
+        if not v:
+            return None
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(pattern, v):
+            raise ValueError("Invalid email address format")
+        return v
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "email": "admin@university.edu.ng"
+            }
+        }
 
 
 # ===== Hall Management Schemas =====

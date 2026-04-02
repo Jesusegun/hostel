@@ -19,6 +19,7 @@ from app.dependencies import require_dsa
 from app.schemas.admin import (
     CreateHallAdminRequest,
     ResetPasswordResponse,
+    UpdateUserEmailRequest,
     UserResponse,
     CreateHallRequest,
     CreateHallResponse,
@@ -173,6 +174,66 @@ async def unlock_user_account(
         "message": "Account unlocked successfully",
         "user_id": user.id,
         "username": user.username
+    }
+
+
+@router.put("/users/{user_id}/email", status_code=status.HTTP_200_OK)
+async def update_user_email(
+    user_id: int,
+    request: UpdateUserEmailRequest,
+    current_user: User = Depends(require_dsa),
+    db: Session = Depends(get_db)
+):
+    """
+    Update a user's email address.
+    
+    Sets or clears the contact email for a user. Email is used for:
+    - Sync failure alerts (admin users)
+    - New issue digest notifications (hall admins)
+    
+    Only DSA can access this endpoint.
+    
+    Args:
+        user_id: ID of the user to update
+        request: UpdateUserEmailRequest with email or null
+    
+    Returns:
+        dict: Updated user info
+    
+    Raises:
+        HTTPException 404: If user does not exist
+        HTTPException 400: If email already in use by another user
+    """
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    new_email = request.email
+    
+    # Check uniqueness if setting a non-null email
+    if new_email:
+        existing = db.query(User).filter(
+            User.email == new_email,
+            User.id != user_id
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Email '{new_email}' is already assigned to user '{existing.username}'"
+            )
+    
+    target_user.email = new_email
+    db.commit()
+    db.refresh(target_user)
+    
+    return {
+        "message": f"Email updated for user '{target_user.username}'",
+        "user_id": target_user.id,
+        "username": target_user.username,
+        "email": target_user.email,
     }
 
 

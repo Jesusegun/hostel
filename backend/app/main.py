@@ -8,6 +8,8 @@ Architecture:
     main.py (this file) → Initializes app → Registers routes → Starts server
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -15,7 +17,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
-from app.config import settings, get_cors_origins
+from app.config import settings, get_cors_origins, is_production
 from app.database import SessionLocal, check_db_connection, get_db_url_safe
 from app.logging_config import configure_logging
 from app.middleware import RequestContextMiddleware
@@ -31,6 +33,63 @@ import logging
 configure_logging()
 logger = logging.getLogger(__name__)
 
+
+# ===== Lifespan Context Manager =====
+# Replaces the deprecated @app.on_event("startup") / @app.on_event("shutdown") pattern.
+# FastAPI recommends lifespan since v0.93. It guarantees symmetric startup/shutdown
+# even if an exception occurs during startup.
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application Lifespan
+
+    Runs startup logic before yielding, then shutdown logic after yield.
+    FastAPI calls this once when the server starts and once when it stops.
+
+    Startup:
+        - Verify database connection
+        - Start Google Sheets sync scheduler
+
+    Shutdown:
+        - Stop sync scheduler gracefully
+    """
+    # ── STARTUP ──────────────────────────────────────────────
+    logger.info("=" * 60)
+    logger.info(f"Starting {settings.APP_NAME}")
+    logger.info(f"Environment: {settings.ENVIRONMENT}")
+    logger.info(f"Debug Mode: {settings.DEBUG}")
+    logger.info(f"Database: {get_db_url_safe()}")
+    logger.info("=" * 60)
+
+    if check_db_connection():
+        logger.info("Database connection successful")
+    else:
+        logger.warning("Database connection failed - check your DATABASE_URL")
+        logger.warning("Sync scheduler will not start until database is connected")
+
+    try:
+        start_scheduler()
+        logger.info(f"Sync scheduler started (runs every {settings.SYNC_INTERVAL_MINUTES} minutes)")
+    except Exception as e:
+        logger.warning(f"Failed to start sync scheduler: {e}")
+        logger.warning("Manual sync will still work via API endpoint")
+
+    yield  # Application runs here
+
+    # ── SHUTDOWN ─────────────────────────────────────────────
+    logger.info("=" * 60)
+    logger.info("Shutting down gracefully...")
+
+    try:
+        stop_scheduler()
+        logger.info("Sync scheduler stopped")
+    except Exception as e:
+        logger.warning(f"Error stopping sync scheduler: {e}")
+
+    logger.info("=" * 60)
+
+
 # ===== Create FastAPI Application =====
 
 app = FastAPI(
@@ -38,7 +97,8 @@ app = FastAPI(
     description="Backend API for Hostel Repair Management System",
     version=settings.API_VERSION,
     debug=settings.DEBUG,
-    
+    lifespan=lifespan,
+
     # API Documentation URLs
     docs_url="/api/docs",  # Swagger UI: http://localhost:8000/api/docs
     redoc_url="/api/redoc",  # ReDoc: http://localhost:8000/api/redoc
@@ -60,77 +120,21 @@ app.add_middleware(SlowAPIMiddleware)
 
 # ===== CORS Middleware =====
 # CORS = Cross-Origin Resource Sharing
-# Allows frontend (React on localhost:3000) to talk to backend (FastAPI on localhost:8000)
+# Allows frontend (React on localhost:5173) to talk to backend (FastAPI on localhost:8000).
+# In production: only the methods and headers the API actually uses are allowed.
+
+# Methods and headers the API actually needs — no wildcard in production.
+_ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+_ALLOWED_HEADERS = ["Authorization", "Content-Type", "Accept"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_cors_origins(),  # Which domains can access our API
-    allow_credentials=True,  # Allow cookies/auth headers
-    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, PUT, DELETE)
-    allow_headers=["*"],  # Allow all headers
+    allow_origins=get_cors_origins(),   # Which domains can access our API
+    allow_credentials=True,             # Allow cookies/auth headers
+    allow_methods=["*"] if not is_production() else _ALLOWED_METHODS,
+    allow_headers=["*"] if not is_production() else _ALLOWED_HEADERS,
 )
 
-
-# ===== Startup Event =====
-# Runs once when the server starts
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    Startup Tasks
-    
-    Runs when the server starts. Good place for:
-    - Database connection checks
-    - Loading data into memory
-    - Starting background tasks
-    """
-    logger.info("=" * 60)
-    logger.info(f"Starting {settings.APP_NAME}")
-    logger.info(f"Environment: {settings.ENVIRONMENT}")
-    logger.info(f"Debug Mode: {settings.DEBUG}")
-    logger.info(f"Database: {get_db_url_safe()}")
-    logger.info("=" * 60)
-    
-    # Check database connection
-    if check_db_connection():
-        logger.info("Database connection successful")
-    else:
-        logger.warning("Database connection failed - check your DATABASE_URL")
-        logger.warning("Sync scheduler will not start until database is connected")
-    
-    # Start background scheduler for Google Sheets sync
-    try:
-        start_scheduler()
-        logger.info(f"Sync scheduler started (runs every {settings.SYNC_INTERVAL_MINUTES} minutes)")
-    except Exception as e:
-        logger.warning(f"Failed to start sync scheduler: {e}")
-        logger.warning("Manual sync will still work via API endpoint")
-
-
-# ===== Shutdown Event =====
-# Runs when the server stops
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """
-    Shutdown Tasks
-    
-    Runs when the server stops. Good place for:
-    - Closing database connections
-    - Saving state
-    - Cleanup tasks
-    """
-    logger.info("=" * 60)
-    logger.info("Shutting down gracefully...")
-    
-    # Stop background scheduler
-    try:
-        stop_scheduler()
-        logger.info("Sync scheduler stopped")
-    except Exception as e:
-        logger.warning(f"Error stopping sync scheduler: {e}")
-    
-    logger.info("=" * 60)
 
 
 # ===== Root Endpoint =====

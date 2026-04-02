@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Card from '../components/common/Card.jsx'
 import Button from '../components/common/Button.jsx'
-import { fetchAllUsers, resetUserPassword, unlockUser } from '../services/adminService.js'
+import { fetchAllUsers, resetUserPassword, unlockUser, updateUserEmail } from '../services/adminService.js'
 import useAuth from '../hooks/useAuth.js'
 import { formatUsername } from '../utils/formatUsername.js'
 
@@ -23,6 +23,9 @@ export default function AdminUsersPage() {
   const [passwordData, setPasswordData] = useState(null)
   const [resetting, setResetting] = useState(false)
   const [unlocking, setUnlocking] = useState(false)
+  const [editingEmailUserId, setEditingEmailUserId] = useState(null)
+  const [emailInput, setEmailInput] = useState('')
+  const [savingEmail, setSavingEmail] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -119,6 +122,32 @@ export default function AdminUsersPage() {
     }
   }
 
+  const startEditEmail = (targetUser) => {
+    setEditingEmailUserId(targetUser.id)
+    setEmailInput(targetUser.email || '')
+  }
+
+  const cancelEditEmail = () => {
+    setEditingEmailUserId(null)
+    setEmailInput('')
+  }
+
+  const handleSaveEmail = async (userId) => {
+    try {
+      setSavingEmail(true)
+      setError(null)
+      await updateUserEmail(userId, emailInput || null)
+      setEditingEmailUserId(null)
+      setEmailInput('')
+      await loadData()
+    } catch (err) {
+      console.error('Failed to update email:', err)
+      setError(err.response?.data?.detail || 'Failed to update email. Please try again.')
+    } finally {
+      setSavingEmail(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
@@ -150,6 +179,7 @@ export default function AdminUsersPage() {
                 <th className="rounded-tl-xl px-4 py-3">Username</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">Hall</th>
+                <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Created</th>
                 <th className="rounded-tr-xl px-4 py-3 text-right">Actions</th>
@@ -158,13 +188,13 @@ export default function AdminUsersPage() {
             <tbody className="divide-y divide-neutral-100">
               {error ? (
                 <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-red-600">
+                  <td colSpan="7" className="px-4 py-8 text-center text-red-600">
                     {error}
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-neutral-500">
+                  <td colSpan="7" className="px-4 py-8 text-center text-neutral-500">
                     No users found.
                   </td>
                 </tr>
@@ -185,6 +215,50 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-4 py-4 text-sm text-neutral-600">
                       {user.hall_name || '-'}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-neutral-600">
+                      {editingEmailUserId === user.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="email"
+                            value={emailInput}
+                            onChange={(e) => setEmailInput(e.target.value)}
+                            placeholder="user@example.com"
+                            className="w-44 rounded border border-neutral-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEmail(user.id)
+                              if (e.key === 'Escape') cancelEditEmail()
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleSaveEmail(user.id)}
+                            disabled={savingEmail}
+                            className="rounded px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={cancelEditEmail}
+                            className="rounded px-2 py-1 text-xs font-medium text-neutral-500 hover:bg-neutral-100"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <span className={user.email ? '' : 'text-neutral-400 italic'}>
+                            {user.email || 'Not set'}
+                          </span>
+                          <button
+                            onClick={() => startEditEmail(user)}
+                            className="ml-1 rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+                            title="Edit email"
+                          >
+                            ✏️
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-sm text-neutral-600">
                       {user.is_locked ? (

@@ -11,7 +11,7 @@ Why Pydantic Settings?
 - Clear documentation of required variables
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from typing import List
 
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # ===== Application Settings =====
     APP_NAME: str = "Hostel Repair Management System"
     ENVIRONMENT: str = "development"  # development, staging, production
-    DEBUG: bool = True
+    DEBUG: bool = False
     API_VERSION: str = "v1"
     
     # ===== Server Settings =====
@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str  # REQUIRED - use: openssl rand -hex 32
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_HOURS: int = 24
+    PASSWORD_RESET_TOKEN_EXPIRY_MINUTES: int = 15
+    PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS: int = 60
+    PASSWORD_RESET_MAX_REQUESTS_PER_WINDOW: int = 5
+    PASSWORD_RESET_RATE_LIMIT_WINDOW_SECONDS: int = 300
     
     # ===== Google Sheets API =====
     GOOGLE_SHEETS_CREDENTIALS_FILE: str = "credentials.json"
@@ -69,11 +73,13 @@ class Settings(BaseSettings):
     
     # ===== Background Tasks =====
     SYNC_INTERVAL_MINUTES: int = 15  # How often to sync from Google Sheets
+    SYNC_FAILURE_ALERT_THRESHOLD: int = 3  # Alert admins after N consecutive sync failures
     
-    class Config:
-        """Pydantic configuration"""
-        env_file = ".env"  # Load from .env file
-        case_sensitive = True  # DATABASE_URL != database_url
+    model_config = SettingsConfigDict(
+        env_file=".env",  # Load from .env file
+        case_sensitive=True,  # DATABASE_URL != database_url
+        extra="ignore",  # Allow unused legacy env vars (e.g., CLOUDINARY_*)
+    )
 
 
 @lru_cache()

@@ -17,7 +17,7 @@ Why this service exists:
 """
 
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func, and_
@@ -164,7 +164,7 @@ def get_issue_by_id(
 
 def update_issue_status(
     db: Session,
-    issue_id: int,
+    issue: Issue,
     new_status: IssueStatus,
     current_user: User
 ) -> Optional[Issue]:
@@ -172,8 +172,6 @@ def update_issue_status(
     Update issue status and create audit log entry.
     
     Validates:
-    - Issue exists
-    - User has access to issue
     - Status transition is valid (pending -> in_progress -> done, can skip steps)
     
     When status is set to "done":
@@ -182,7 +180,7 @@ def update_issue_status(
     
     Args:
         db: Database session
-        issue_id: Issue ID to update
+        issue: Issue object to update (must be fetched and verified beforehand)
         new_status: New status value
         current_user: User making the change
     
@@ -190,25 +188,20 @@ def update_issue_status(
         Updated Issue object if successful, None otherwise
     
     Example:
-        issue = update_issue_status(db, 1, IssueStatus.IN_PROGRESS, current_user)
-        # Issue status updated, audit log created
+        issue = get_issue_by_id(db, 1, current_user)
+        if issue:
+            issue = update_issue_status(db, issue, IssueStatus.IN_PROGRESS, current_user)
     """
-    # Get issue and verify access
-    issue = get_issue_by_id(db, issue_id, current_user)
-    
-    if not issue:
-        return None
-    
     # Store old status for audit log
     old_status = issue.status
     
     # Update status
     issue.status = new_status
-    issue.updated_at = datetime.utcnow()
+    issue.updated_at = datetime.now(timezone.utc)
     
     # If status is "done", set resolution info
     if new_status == IssueStatus.DONE:
-        issue.resolved_at = datetime.utcnow()
+        issue.resolved_at = datetime.now(timezone.utc)
         issue.resolved_by = current_user.id
     elif old_status == IssueStatus.DONE and new_status != IssueStatus.DONE:
         # If changing from "done" back to another status, clear resolution info
