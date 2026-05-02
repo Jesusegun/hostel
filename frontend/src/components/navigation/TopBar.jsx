@@ -63,16 +63,6 @@ export default function TopBar({ onMenuClick }) {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="hidden md:block">
-            <div className="relative">
-              <input
-                type="search"
-                placeholder="Search room, hall, category"
-                className="w-72 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm focus:border-primary-500 focus:outline-none"
-              />
-              <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-neutral-400">⌕</span>
-            </div>
-          </div>
           <div className="relative" ref={menuRef}>
             <button
               type="button"

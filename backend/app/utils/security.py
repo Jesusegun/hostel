@@ -14,7 +14,7 @@ Security Best Practices:
 - Token payload contains minimal data (username, role, hall_id only)
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 import bcrypt
 from jose import JWTError, jwt
@@ -121,16 +121,16 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     
     # Set expiration time
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
         # Use expiration hours from config (default: 24 hours)
-        expire = datetime.utcnow() + timedelta(hours=settings.JWT_EXPIRATION_HOURS)
+        expire = datetime.now(timezone.utc) + timedelta(hours=settings.JWT_EXPIRATION_HOURS)
     
     # Add expiration to token payload
     to_encode.update({"exp": expire})
     
     # Add issued at time (iat) for token freshness tracking
-    to_encode.update({"iat": datetime.utcnow()})
+    to_encode.update({"iat": datetime.now(timezone.utc)})
     
     # Encode token with secret key and algorithm
     encoded_jwt = jwt.encode(

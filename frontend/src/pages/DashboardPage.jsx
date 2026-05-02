@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Card from '../components/common/Card.jsx'
 import KpiCard from '../components/dashboard/KpiCard.jsx'
@@ -60,7 +60,7 @@ export default function DashboardPage() {
   const [dateRange, setDateRange] = useState(null)
   const isAdmin = user?.role === 'admin'
 
-  const loadDashboardData = async (dateRangeParams = null) => {
+  const loadDashboardData = useCallback(async (dateRangeParams = null) => {
     setLoading(true)
     setError(null)
     try {
@@ -140,11 +140,11 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [isAdmin])
 
   useEffect(() => {
     loadDashboardData()
-  }, [isAdmin])
+  }, [loadDashboardData])
 
   const handleDateRangeChange = (range) => {
     setDateRange(range)
@@ -433,7 +433,7 @@ export default function DashboardPage() {
             <p className="text-sm font-semibold text-neutral-500">Recent Issues</p>
             <h3 className="text-2xl font-bold text-neutral-900">Latest Reports</h3>
           </div>
-          <Button variant="ghost" className="text-sm" onClick={() => (window.location.href = '/issues')}>
+          <Button variant="ghost" className="text-sm" onClick={() => navigate('/issues')}>
             View all
           </Button>
         </div>
@@ -456,7 +456,7 @@ export default function DashboardPage() {
                   <tr
                     key={issue.id}
                     className="cursor-pointer transition-colors hover:bg-neutral-50"
-                    onClick={() => (window.location.href = `/issues/${issue.id}`)}
+                    onClick={() => navigate(`/issues/${issue.id}`)}
                   >
                     <td className="px-4 py-4 text-sm font-medium text-neutral-900">{issue.room_number}</td>
                     <td className="px-4 py-4 text-sm text-neutral-600">{issue.hall_name}</td>
